@@ -189,6 +189,8 @@ class StorageBackendFactory:
             return backend_class(storage_config, mem_pool_host)
         elif backend_name == "shm":
             return backend_class(storage_config, mem_pool_host)
+        elif backend_name == "gcs":
+            return backend_class(storage_config, mem_pool_host)
         else:
             raise ValueError(f"Unknown built-in backend: {backend_name}")
 
@@ -245,3 +247,10 @@ StorageBackendFactory.register_backend(
     "sglang.srt.mem_cache.storage.shm",
     "HiCacheShm",
 )
+
+StorageBackendFactory.register_backend(
+    "gcs",
+    "sglang.srt.mem_cache.storage.gcs.gcs_storage",
+    "HiCacheGCS",
+)
+
