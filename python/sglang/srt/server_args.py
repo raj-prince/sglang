@@ -2682,6 +2682,7 @@ class ServerArgs:
                 "simm",
                 "mori",
                 "shm",
+                "gcs",
             ],
         ),
         NS("memory"),
