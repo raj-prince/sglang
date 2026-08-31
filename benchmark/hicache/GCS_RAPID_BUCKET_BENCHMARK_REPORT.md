@@ -86,6 +86,8 @@ export GOOGLE_APPLICATION_CREDENTIALS=/home/princer_google_com/.config/gcloud/ap
 export SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN=1
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+# Storage IO workers for concurrent multi-session prefetch/backup
+export SGLANG_HICACHE_IO_WORKERS=32
 
 source .venv/bin/activate
 
@@ -209,9 +211,33 @@ Measured live with exact integer token sequences via `input_ids`:
 
 ---
 
-## 7. Key Takeaways & Recommendations for L3 GCS Cache
+## 7. Multi-Session Concurrency Summary
 
-### 7.1 Core Takeaways for L3 GCS Cache
+For multi-session concurrent burst evaluation ($C \in [1, 4, 8, 16, 32]$) across both **Distinct Multi-Tenant** (100% unique contexts) and **Shared Prefix RAG** workloads, along with raw network bandwidth saturation analysis ($\sim 680\text{ MB/s}$ NIC ceiling) and L3 SSD tiering solutions, see the dedicated report:
+
+👉 **[GCS Rapid Bucket Multi-Session Concurrency Benchmark & Bottleneck Report](file:///home/princer_google_com/sglang/benchmark/hicache/GCS_RAPID_BUCKET_CONCURRENCY_BENCHMARK_REPORT.md)**
+
+### Concurrency Quick Reference ($16\text{K}$ Prefix per Session)
+
+| Concurrency | Total Batch Tokens | Cold Prefill $P_{50}$ TTFT | GCS Rapid Bucket $P_{50}$ TTFT | GPU HBM Hot $P_{50}$ TTFT | HBM Hot Speedup |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **$C = 1$** | `16,401` | `2,264.2 ms` | **`588.4 ms`** | **`14.1 ms`** | **`160.49x`** |
+| **$C = 4$** | `65,604` | `1,138.1 ms` | **`1,080.8 ms`** | **`33.8 ms`** | **`33.68x`** |
+| **$C = 8$** | `131,208` | `1,537.7 ms` | **`2,192.8 ms`** | **`46.0 ms`** | **`33.40x`** |
+| **$C = 16$** | `262,423` | `2,280.8 ms` | **`4,835.0 ms`** | **`83.3 ms`** | **`27.40x`** |
+| **$C = 32$** | `524,855` | `4,610.1 ms` | **`7,016.5 ms`** | **`141.6 ms`** | **`32.56x`** |
+
+```bash
+cd ~/sglang
+./run_concurrency_benchmark.sh 16k distinct
+./run_concurrency_benchmark.sh 16k shared
+```
+
+---
+
+## 8. Key Takeaways & Recommendations for L3 GCS Cache
+
+### 8.1 Core Takeaways for L3 GCS Cache
 
 1. **Persistent Cross-Instance & Auto-Scaling Cache**:
    - Unlike L1 (GPU HBM) and L2 (Host RAM) which are volatile and strictly bound to a single process/machine, **L3 GCS Rapid Bucket persists indefinitely**.
@@ -227,7 +253,7 @@ Measured live with exact integer token sequences via `input_ids`:
 
 ---
 
-### 7.2 Architectural Recommendations for L3 GCS Rapid Bucket
+### 8.2 Architectural Recommendations for L3 GCS Rapid Bucket
 
 1. **Optimize Page Sizing (`--page-size 64` or `--page-size 4096`)**:
    - Avoid token-level granularity (`page_size=1` / 12 KB per file) in production because it generates thousands of individual HTTP requests.
@@ -246,7 +272,7 @@ Measured live with exact integer token sequences via `input_ids`:
 
 ---
 
-## 8. Frequently Asked Questions (FAQs)
+## 9. Frequently Asked Questions (FAQs)
 
 ### Q1: What factors affect the write parallelism when writing to the L3 cache?
 

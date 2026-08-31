@@ -6,6 +6,8 @@ export GOOGLE_APPLICATION_CREDENTIALS=/home/princer_google_com/.config/gcloud/ap
 export SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN=1
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+# SGLang Storage IO concurrency workers (parallel prefetch/backup across sessions)
+export SGLANG_HICACHE_IO_WORKERS=32
 
 source .venv/bin/activate
 
@@ -29,3 +31,6 @@ python3 -m sglang.launch_server \
   --hicache-storage-backend gcs \
   --hicache-storage-prefetch-policy wait_complete \
   --hicache-storage-backend-extra-config '{"protocol": "gcs", "bucket": "princer-rapid-uscentral1a", "prefix": "sglang_kv_cache", "num_workers": 64, "metadata_ttl": 300}'
+
+# NOTE: To enable Tiered L3 Local NVMe SSD + L4 GCS Rapid Bucket caching, replace extra-config with:
+#   --hicache-storage-backend-extra-config '{"protocol": "simplecache", "bucket": "princer-rapid-uscentral1a", "prefix": "sglang_kv_cache", "cache_storage": "/mnt/disks/local-ssd/kv_cache", "num_workers": 64, "metadata_ttl": 300}'
